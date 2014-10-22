@@ -6,22 +6,49 @@ from BioClasses import *
 import cPickle
 import argparse
 import os
+import time
+
+def PrintStatic( line ):
+	sys.stderr.write( "\r%s".ljust( 20 ) % line )
+	sys.stderr.flush()
+
+def errmsg( msg, newline=True ):
+	if newline:
+		print >> sys.stderr, msg
+	else:
+		print >> sys.stderr, msg,
 
 def main( fn, output_directory, genes_to_ignore, output_prefix, window_size, pvalue_thresh, excess, verbose, triplet_fix ):
+	errmsg( "Loading data from %s..." % fn, False ) 
 	with open( fn ) as f:
 		genes = cPickle.load( f )
+	errmsg( "Done." )
+	errmsg( "Found gene objects for %s genes." % len( genes ))
 	
-	tabixfile = pysam.Tabixfile( "/home/paul/bioinf/Data/global_ribosome_profiles.bed.gz", "r" )
+	bed_fn = "/home/paul/bioinf/Data/global_ribosome_profiles.1-based.bed.gz"
+	errmsg( "Opening tabix file %s..." % bed_fn, False )
+	tabixfile = pysam.Tabixfile( bed_fn, "r" )
+	errmsg( "Done." )
 	
 	peaks_file = open( "%s/%s.peaks.txt" % ( output_directory, output_prefix ), "w" )
 	nopeaks_file = open( "%s/%s.nopeaks.txt" % ( output_directory, output_prefix ), "w" )
 	
 	c = 0
 	d = 0
+	start_time = time.time()
 	for gene_id,G in genes.iteritems():
+		current_time = time.time()
+		try:
+			outstanding_time = ( len( genes ) - d )*( current_time - start_time )/d
+			outstanding_minutes = outstanding_time//60
+			outstanding_seconds = outstanding_time%60
+		except ZeroDivisionError:
+			outstanding_minutes = "Inf"
+			outstanding_seconds = 0.000
+		PrintStatic( "Processing (%s%%): %s [ETA: %s min %s sec]" % ( round( d/len( genes )*100, 2 ), gene_id, round( outstanding_minutes, 0 ), round( outstanding_seconds, 2 )))
 		if gene_id in genes_to_ignore:
 			if verbose:
-				print >> sys.stderr, "Ignoring gene: %s" % gene_id
+				errmsg( "Ignoring gene: %s" % gene_id )
 			continue
 		if c > 99:
 			break
@@ -50,12 +77,13 @@ def main( fn, output_directory, genes_to_ignore, output_prefix, window_size, pva
 		
 				c += 0
 		d += 1	
-
+	errmsg( "" )
+	
 	tabixfile.close()
 	peaks_file.close()
 	nopeaks_file.close()
 	
-	print >> sys.stderr, "Results for %s of %s genes." % ( c, d )
+	errmsg( "Results for %s of %s genes." % ( c, d ))
 	
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser( description="Identify diverse genes." )
@@ -82,6 +110,7 @@ if __name__ == "__main__":
 	output_directory = args.output_directory
 	triplet_fix = args.triplet_fix
 	
+	# defense
 	if window_size % 2 == 0:
 		raise ValueError( "w (%s) must be odd!" % window_size )
 	
@@ -106,5 +135,7 @@ if __name__ == "__main__":
 			print >> sys.stderr, "Directory exists... will overwrite existing files using same prefix (%s)." % output_prefix
 	else:
 		pass
-	
-	main( fn, output_directory, genes_to_ignore, output_prefix, window_size, pvalue_thresh, excess_fold, verbose, triplet_fix )
+	try:
+		main( fn, output_directory, genes_to_ignore, output_prefix, window_size, pvalue_thresh, excess_fold, verbose, triplet_fix )
+	except KeyError:
+		pass
