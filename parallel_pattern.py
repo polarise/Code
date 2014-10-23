@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division
 import sys
+import time
 import multiprocessing
 
 class Worker( multiprocessing.Process ):
@@ -27,7 +28,7 @@ class Worker( multiprocessing.Process ):
 		"""
 		while True:
 			myobject = self.q1.get()
-			if myobject == None: # the poison pill; assume that 'None' is not a valid myobject value
+			if myobject == "END": # the poison pill; assume that 'END' is not a valid myobject value
 				self.q2.put( "END" ) # mark that this process is done
 				self.q1.task_done() # unblock q1
 				self.q2.task_done() # unblock q2
@@ -45,7 +46,7 @@ if __name__ == "__main__":
 		print >> sys.stderr, "usage:./script.py <filename>"
 		sys.exit( 1 )
 	
-	num_of_processors = multiprocession.cpu_count()
+	num_of_processors = multiprocessing.cpu_count()
 	q1 = multiprocessing.JoinableQueue() # input queue
 	q2 = multiprocessing.JoinableQueue() # output queue
 	
@@ -56,7 +57,7 @@ if __name__ == "__main__":
 	
 	# put the poison pill
 	for i in xrange( num_of_processors ):
-		q1.put( None ) # 'None' is the poison pill
+		q1.put( "END" ) # 'END' is the poison pill
 	
 	# define the child processes, one process per processor
 	procs = [ Worker( i, q1, q2 ) for i in xrange( num_of_processors )]
