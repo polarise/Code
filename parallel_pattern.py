@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import multiprocessing
 
 class Worker( multiprocessing.Process ):
