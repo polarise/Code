@@ -37,6 +37,7 @@ def main( fn, output_directory, genes_to_ignore, output_prefix, window_size, pva
 	d = 0
 	start_time = time.time()
 	for gene_id,G in genes.iteritems():
+		# ETA algorithm
 		current_time = time.time()
 		try:
 			outstanding_time = ( len( genes ) - d )*( current_time - start_time )/d
@@ -45,7 +46,9 @@ def main( fn, output_directory, genes_to_ignore, output_prefix, window_size, pva
 		except ZeroDivisionError:
 			outstanding_minutes = "Inf"
 			outstanding_seconds = 0.000
+			
 		PrintStatic( "Processing (%s%%): %s [ETA: %s min %s sec]" % ( round( d/len( genes )*100, 2 ), gene_id, round( outstanding_minutes, 0 ), round( outstanding_seconds, 2 )))
+		
 		if gene_id in genes_to_ignore:
 			if verbose:
 				errmsg( "Ignoring gene: %s" % gene_id )
